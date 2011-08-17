@@ -2,10 +2,11 @@
 -- @author Alexander Yakushev &lt;yakushev.alex@gmail.com&gt;
 -- @copyright 2010-2011 Alexander Yakushev
 -- @release v1.0
+-- modified by Raphaël Fournier <fournier AT lavabit.com>
 ---------------------------------------------------------------------------
 
-require('utf8')
-require('jamendo')
+require('awesompd.utf8')
+require('awesompd.jamendo')
 local beautiful = require('beautiful')
 local naughty = naughty
 local awful = awful
