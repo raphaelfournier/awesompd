@@ -121,9 +121,9 @@ end
 function awesompd:run()
    enable_dbg = self.debug_mode
    jamendo.set_current_format(self.jamendo_format)
-   if self.album_cover_size > 100 then
-      self.album_cover_size = 100
-   end
+--   if self.album_cover_size > 100 then
+--      self.album_cover_size = 100
+--   end
 
    self:update_track()
    self:check_playlists()
@@ -367,7 +367,7 @@ function awesompd:get_playback_menu()
                                self:command_toggle(), 
                                self.ICONS.PLAY_PAUSE })
       if self.connected and self.status ~= "Stopped" then
-         if self.list_array[self.current_number-1] then
+         if self.current_number ~= 1 then
             table.insert(new_menu, 
                          { "Prev: " .. 
                            awesompd.protect_string(jamendo.replace_link(
@@ -586,7 +586,9 @@ end
 
 function awesompd:add_hint(hint_title, hint_text, hint_image)
    self:remove_hint()
-   hint_image = self.show_jamendo_album_covers and hint_image or nil
+   local img = awful.util.pread("/home/raph/scripts/coverart.sh")
+   local ico = image(img)
+   hint_image = ico or self.show_jamendo_album_covers and hint_image or nil
    self.notification = naughty.notify({ title      =  hint_title
 					, text       = awesompd.protect_string(hint_text)
 					, timeout    = 5
