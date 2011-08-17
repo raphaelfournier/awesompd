@@ -627,7 +627,7 @@ function awesompd:notify_state(state_changed)
    self:add_hint(state_header, full_state)
 end
 
-function awesompd:wrap_output(text)
+function awesompd:wrap_output(text,color)
   if color then
     tcolor = "#dc8cc3"
   else
