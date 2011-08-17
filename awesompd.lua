@@ -79,6 +79,7 @@ function awesompd:create()
    instance.notification = nil
    instance.scroll_pos = 1
    instance.text = ""
+   instance.textcolor = "#dc8cc3"
    instance.status = "Stopped"
    instance.status_text = "Stopped"
    instance.to_notify = false
@@ -627,8 +628,13 @@ function awesompd:notify_state(state_changed)
 end
 
 function awesompd:wrap_output(text)
-   return format('<span font="%s">%s%s%s</span>', 
-                 self.font, self.ldecorator, 
+  if color then
+    tcolor = "#dc8cc3"
+  else
+    tcolor = "#ffffff"
+  end
+  return format('<span font="%s" color="%s">%s%s%s</span>', 
+                 self.font, tcolor, self.ldecorator, 
                  awesompd.protect_string(text), self.rdecorator)
 end
 
@@ -649,8 +655,8 @@ function awesompd:mpcquery()
       " -p " .. self.servers[self.current_server].port .. " "
 end
 
-function awesompd:set_text(text)
-   self.widget.text = self:wrap_output(text)
+function awesompd:set_text(text,color)
+   self.widget.text = self:wrap_output(text,color)
 end
 
 function awesompd.find_pattern(text, pattern, start)
@@ -678,8 +684,12 @@ function awesompd:scroll_text(text)
 end
 
 function awesompd:update_widget()
-   self:set_text(self:scroll_text(self.text))
-   self:check_notify()
+  if self.status ~= "Paused" then
+    self:set_text(self:scroll_text(self.text),true)
+  else
+    self:set_text(self:scroll_text(self.text),false)
+  end
+  self:check_notify()
 end
 
 function awesompd:check_notify()
