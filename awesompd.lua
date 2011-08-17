@@ -80,6 +80,7 @@ function awesompd:create()
    instance.scroll_pos = 1
    instance.text = ""
    instance.textcolor = "#dc8cc3"
+   instance.notifications = true
    instance.status = "Stopped"
    instance.status_text = "Stopped"
    instance.to_notify = false
@@ -327,6 +328,7 @@ function awesompd:command_show_menu()
                                     self:get_jamendo_order_menu() }})
                 end 
                 table.insert(new_menu, { "Servers", self:get_servers_menu() }) 
+                table.insert(new_menu, { "Notifications", self:get_notifications_menu() }) 
                 self.main_menu = awful.menu({ items = new_menu, width = 300 }) 
                 self.recreate_menu = false 
              end 
@@ -434,6 +436,14 @@ function awesompd:get_playlists_menu()
    return self.playlists_menu
 end
 
+-- Returns a menu for toggling on/off notifications.
+function awesompd:get_notifications_menu()
+  local new_menu = {}
+  table.insert(new_menu, {"On", function() self.notifications = true end, self.notifications == true and self.ICONS.RADIO or nil})
+  table.insert(new_menu, {"Off", function() self.notifications = false end, self.notifications == false and self.ICONS.RADIO or nil})
+  self.notifications_menu = new_menu
+  return self.notifications_menu
+end
 -- Returns the server menu. Menu consists of all servers specified by user during initialization.
 function awesompd:get_servers_menu()
    if self.recreate_servers then
@@ -693,7 +703,7 @@ function awesompd:update_widget()
 end
 
 function awesompd:check_notify()
-   if self.to_notify then
+   if self.to_notify and self.notifications then
       self:notify_track()
       self.to_notify = false
    end
