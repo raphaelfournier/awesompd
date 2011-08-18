@@ -698,7 +698,7 @@ function awesompd:update_widget()
   if self.status ~= "Paused" then
     self:set_text(self:scroll_text(self.text),true)
   else
-    self:set_text(self:scroll_text(self.text),false)
+    self:set_text(self.text,false)
   end
   self:check_notify()
 end
