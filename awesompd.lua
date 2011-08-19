@@ -14,10 +14,10 @@ local format = string.format
 -- Debug stuff
 
 local enable_dbg = true
-local function dbg (...)
-   if enable_dbg then
-      print(...)
-   end
+local function dbg(vars)
+    local text = ""
+    for i=1, #vars do text = text .. vars[i] .. " | " end
+    naughty.notify({ text = text, timeout = 0 })
 end
 
 awesompd = {}
@@ -902,7 +902,6 @@ end
 -- folders. If there is no cover art either returns the default album
 -- cover.
 function awesompd:get_cover(track)
-   dbg(self.ICONS.DEFAULT_ALBUM_COVER)
    return jamendo.try_get_cover(track) or 
    self:try_get_local_cover() or self.ICONS.DEFAULT_ALBUM_COVER
 end
