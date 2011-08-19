@@ -1,11 +1,11 @@
 ---------------------------------------------------------------------------
--- @author Alexander Yakushev &lt;yakushev.alex@gmail.com&gt;
+-- @author Alexander Yakushev <yakushev.alex@gmail.com>
 -- @copyright 2010-2011 Alexander Yakushev
--- @release v1.0
+-- @release v1.0.4
 ---------------------------------------------------------------------------
 
-require('utf8')
-require('jamendo')
+require('awesompd.utf8')
+require('awesompd.jamendo')
 local beautiful = require('beautiful')
 local naughty = naughty
 local awful = awful
@@ -47,13 +47,21 @@ awesompd.ESCAPE_MENU_SYMBOL_MAPPING["&"] = "'n'"
 -- Helper function for loading icons.  Checks if an icon exists, and
 -- if it does, returns the path to icon, nil otherwise.
 function awesompd.try_load(file)
-   local f = io.open(file)
-   if f then
-      io.close(f)
+   if awful.util.file_readable(file) then
       return file
-   else
-      return nil
    end
+end
+
+-- Just like awful.util.pread, but takes an argument how to read like
+-- "*line" or "*all".
+function awesompd.pread(com, mode)
+   local f = io.popen(com, 'r')
+   local result = nil
+   if f then
+      result = f:read(mode)
+      f:close()
+   end
+   return result
 end
 
 function awesompd.load_icons(path)
@@ -66,6 +74,8 @@ function awesompd.load_icons(path)
    awesompd.ICONS.PREV = awesompd.try_load(path .. "/prev_icon.png")
    awesompd.ICONS.CHECK = awesompd.try_load(path .. "/check_icon.png")
    awesompd.ICONS.RADIO = awesompd.try_load(path .. "/radio_icon.png")
+   awesompd.ICONS.DEFAULT_ALBUM_COVER = 
+      awesompd.try_load(path .. "/default_album_cover.png")
 end
 
 -- Function that returns a new awesompd object.
@@ -106,7 +116,7 @@ function awesompd:create()
    instance.path_to_icons = ""
    instance.ldecorator = " "
    instance.rdecorator = " "
-   instance.show_jamendo_album_covers = true
+   instance.show_album_cover = true
    instance.album_cover_size = 50
 
 -- Widget configuration
@@ -122,14 +132,14 @@ end
 -- Registers timers for the widget
 function awesompd:run()
    enable_dbg = self.debug_mode
+   self.load_icons(self.path_to_icons)
    jamendo.set_current_format(self.jamendo_format)
---   if self.album_cover_size > 100 then
---      self.album_cover_size = 100
---   end
+   if self.album_cover_size > 150 then
+      self.album_cover_size = 150
+   end
 
    self:update_track()
    self:check_playlists()
-   self.load_icons(self.path_to_icons)
    self.update_widget_timer = timer({ timeout = 1 })
    self.update_widget_timer:add_signal("timeout", function() 
                                                      self:update_widget() 
@@ -176,12 +186,22 @@ end
 
 -- /// Group of mpc command functions ///
 
+-- Takes a command to mpc and a hook that is provided with awesompd
+-- instance and the result of command execution.
 function awesompd:command(com,hook)
    local file = io.popen(self:mpcquery() .. com)
    if hook then
       hook(self,file)
    end
    file:close()
+end
+
+-- Takes a command to mpc and read mode and returns the result.
+function awesompd:command_read(com, mode)
+   self:command(com, function(_, f)
+                        result = f:read(mode)
+                     end)
+   return result
 end
 
 function awesompd:command_toggle()
@@ -370,7 +390,7 @@ function awesompd:get_playback_menu()
                                self:command_toggle(), 
                                self.ICONS.PLAY_PAUSE })
       if self.connected and self.status ~= "Stopped" then
-         if self.current_number ~= 1 then
+         if self.list_array[self.current_number-1] then
             table.insert(new_menu, 
                          { "Prev: " .. 
                            awesompd.protect_string(jamendo.replace_link(
@@ -597,9 +617,6 @@ end
 
 function awesompd:add_hint(hint_title, hint_text, hint_image)
    self:remove_hint()
-   local img = awful.util.pread("/home/raph/scripts/coverart.sh")
-   local ico = image(img)
-   hint_image = ico or self.show_jamendo_album_covers and hint_image or nil
    self.notification = naughty.notify({ title      =  hint_title
 					, text       = awesompd.protect_string(hint_text)
 					, timeout    = 5
@@ -649,14 +666,17 @@ function awesompd:wrap_output(text,color)
 end
 
 function awesompd.split (s,t)
-   local l = {n=0}
-   local f = function (s)
-		l.n = l.n + 1
+   local l = { n = 0 }
+   if s == "" then
+      return l
+   end
+   s = s .. "\n"
+   local f = function (s) 
+                l.n = l.n + 1
 		l[l.n] = s
 	     end
-   local p = "%s*(.-)%s*"..t.."%s*"
+   local p = "%s*(.-)%s*\n%s*"
    s = string.gsub(s,p,f)
-   l.n = l.n + 1
    return l
 end
 
@@ -697,7 +717,7 @@ function awesompd:update_widget()
   if self.status ~= "Paused" then
     self:set_text(self:scroll_text(self.text),true)
   else
-    self:set_text(self:scroll_text(self.text),false)
+    self:set_text(self.text,false)
   end
   self:check_notify()
 end
@@ -763,7 +783,9 @@ function awesompd:update_track(file)
 	 if new_track ~= self.unique_text then
             self.text = jamendo.replace_link(new_track)
             self.unique_text = new_track
-            self.album_cover = jamendo.try_get_cover(new_track)
+            if self.show_album_cover then
+               self.album_cover = self:get_cover(new_track)
+            end
 	    self.to_notify = true
 	    self.recreate_menu = true
 	    self.recreate_playback = true
@@ -835,7 +857,7 @@ function awesompd.protect_string(str, for_menu)
    end
 end
 
--- Displays a inputbox on the screen (looks like naughty with prompt).
+-- Displays an inputbox on the screen (looks like naughty with prompt).
 -- title_text - bold text on the first line
 -- prompt_text - preceding text on the second line
 -- hook - function that will be called with input data
@@ -874,4 +896,52 @@ function awesompd:display_inputbox(title_text, prompt_text, hook)
    wbox.widgets = { wtbox, wprompt, layout = awful.widget.layout.vertical.flex }
    awful.prompt.run( { prompt = " " .. prompt_text .. ": " }, wprompt.widget, 
                      exe_callback, nil, nil, nil, done_callback)
+end
+
+-- Gets the cover for the given track. First looks in the Jamendo
+-- cache. If the track is not a Jamendo stream, looks in local
+-- folders. If there is no cover art either returns the default album
+-- cover.
+function awesompd:get_cover(track)
+   dbg(self.ICONS.DEFAULT_ALBUM_COVER)
+   return jamendo.try_get_cover(track) or 
+   self:try_get_local_cover() or self.ICONS.DEFAULT_ALBUM_COVER
+end
+
+-- Tries to find an album cover for the track that is currently
+-- playing.
+function awesompd:try_get_local_cover()
+   if self.mpd_config then
+      local result
+      -- First find the music directory in MPD configuration file
+      local _, _, music_folder = string.find(
+         self.pread('cat ' .. self.mpd_config .. ' | grep -v "#" | grep music_directory', "*line"),
+         'music_directory%s+"(.+)"')
+      music_folder = music_folder .. "/"
+
+      -- Get the path to the file currently playing.
+      local _, _, current_file_folder = 
+         string.find(self:command_read('current -f "%file%"', "*line"), '(.+%/).*')
+
+      local folder = music_folder .. current_file_folder
+      
+      -- Get all images in the folder
+      local covers = self.pread('ls "' .. folder .. '" | grep -P "\.jpg\|\.png\|\.gif"', "*all")
+      local covers_table = self.split(covers)
+      
+      if covers_table.n > 0 then
+         result = folder .. covers_table[1]
+         if covers_table.n > 1 then
+            -- Searching for front cover with grep because Lua regular
+            -- expressions suck:[
+            local front_cover = 
+               self.pread('echo "' .. covers .. 
+                          '" | grep -i "cover\|front\|folder\|albumart" | head -n 1', "*line")
+            if front_cover then
+               result = folder .. front_cover
+            end
+         end
+      end
+      return result
+   end   
 end
