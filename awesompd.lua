@@ -13,7 +13,7 @@ local format = string.format
 
 -- Debug stuff
 
-local enable_dbg = false
+local enable_dbg = true
 local function dbg (...)
    if enable_dbg then
       print(...)
@@ -74,8 +74,7 @@ function awesompd.load_icons(path)
    awesompd.ICONS.PREV = awesompd.try_load(path .. "/prev_icon.png")
    awesompd.ICONS.CHECK = awesompd.try_load(path .. "/check_icon.png")
    awesompd.ICONS.RADIO = awesompd.try_load(path .. "/radio_icon.png")
-   awesompd.ICONS.DEFAULT_ALBUM_COVER = 
-      awesompd.try_load(path .. "/default_album_cover.png")
+   awesompd.ICONS.DEFAULT_ALBUM_COVER = awesompd.try_load(path .. "/default_album_cover.png")
 end
 
 -- Function that returns a new awesompd object.
@@ -574,7 +573,7 @@ function awesompd:check_list()
    if info ~= self.list_line then
       self.list_line = info
       if string.len(info) > 0 then
-	 self.list_array = self.split(string.sub(info,1,string.len(info)),"\n")
+	 self.list_array = self.split(string.sub(info,1,string.len(info)))
       else
 	 self.list_array = {}
       end
@@ -591,7 +590,7 @@ function awesompd:check_playlists()
    if info ~= self.playlists_line then
       self.playlists_line = info
       if string.len(info) > 0 then
-	 self.playlists_array = self.split(info,"\n")
+	 self.playlists_array = self.split(info)
       else
 	 self.playlists_array = {}
       end
@@ -665,7 +664,7 @@ function awesompd:wrap_output(text,color)
                  awesompd.protect_string(text), self.rdecorator)
 end
 
-function awesompd.split (s,t)
+function awesompd.split(s)
    local l = { n = 0 }
    if s == "" then
       return l
