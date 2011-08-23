@@ -88,8 +88,6 @@ function awesompd:create()
    instance.notification = nil
    instance.scroll_pos = 1
    instance.text = ""
-   instance.textcolor = "#dc8cc3"
-   instance.notifications = true
    instance.status = "Stopped"
    instance.status_text = "Stopped"
    instance.to_notify = false
@@ -117,6 +115,9 @@ function awesompd:create()
    instance.rdecorator = " "
    instance.show_album_cover = true
    instance.album_cover_size = 50
+   instance.notifications = true
+   instance.textcolor_play = beautiful.fg_urgent
+   instance.textcolor_pause = beautiful.fg_normal
 
 -- Widget configuration
    instance.widget:add_signal("mouse::enter", function(c)
@@ -655,13 +656,14 @@ end
 
 function awesompd:wrap_output(text,color)
   if color then
-    tcolor = "#dc8cc3"
+    tcolor = self.textcolor_play
+--    bcolor = beautiful.bg_focus 
   else
-    tcolor = "#ffffff"
+    tcolor = self.textcolor_pause
+--    bcolor = beautiful.bg_normal
   end
-  return format('<span font="%s" color="%s">%s%s%s</span>', 
-                 self.font, tcolor, self.ldecorator, 
-                 awesompd.protect_string(text), self.rdecorator)
+--  return format('<span font="%s" color="%s" bgcolor="%s">%s%s%s</span>', self.font, tcolor, bcolor, self.ldecorator, awesompd.protect_string(text), self.rdecorator)
+  return format('<span font="%s" color="%s">%s%s%s</span>', self.font, tcolor, self.ldecorator, awesompd.protect_string(text), self.rdecorator)
 end
 
 function awesompd.split(s)
