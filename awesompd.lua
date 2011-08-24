@@ -753,7 +753,7 @@ function awesompd:update_track(file)
    end
 
    if not track_line or string.len(track_line) == 0 then
-      self.text = "Disconnected"
+      self.text = "" -- Disconnected
       self.unique_text = self.text
       if self.connected then
 	 self:notify_disconnect()
