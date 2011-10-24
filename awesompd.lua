@@ -348,6 +348,7 @@ function awesompd:command_show_menu()
                                     self:get_jamendo_order_menu() }})
                 end 
                 table.insert(new_menu, { "Servers", self:get_servers_menu() }) 
+                table.insert(new_menu, { "External apps", self:get_extapps_menu() }) 
                 table.insert(new_menu, { "Notifications", self:get_notifications_menu() }) 
                 self.main_menu = awful.menu({ items = new_menu, width = 300 }) 
                 self.recreate_menu = false 
@@ -456,6 +457,13 @@ function awesompd:get_playlists_menu()
    return self.playlists_menu
 end
 
+function awesompd:get_extapps_menu()
+  local new_menu = {}
+  table.insert(new_menu, {"Ncmpcpp", function() awful.util.spawn("urxvtc -e 'ncmpcpp'") end, nil})
+  table.insert(new_menu, {"Sonata", function() awful.util.spawn("sonata") end, nil})
+  self.extapps_menu = new_menu
+  return self.extapps_menu
+end
 -- Returns a menu for toggling on/off notifications.
 function awesompd:get_notifications_menu()
   local new_menu = {}
