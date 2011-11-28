@@ -117,7 +117,8 @@ function awesompd:create()
    instance.album_cover_size = 50
    instance.notifications = true
    instance.textcolor_play = beautiful.fg_urgent
-   instance.textcolor_pause = beautiful.fg_normal
+   instance.textcolor_pause = beautiful.fg_focus
+   instance.textcolor_stopped = beautiful.fg_normal
 
 -- Widget configuration
    instance.widget:add_signal("mouse::enter", function(c)
@@ -663,11 +664,15 @@ function awesompd:notify_state(state_changed)
 end
 
 function awesompd:wrap_output(text,color)
-  if color then
+  if color == 1 then
     tcolor = self.textcolor_play
 --    bcolor = beautiful.bg_focus 
   else
-    tcolor = self.textcolor_pause
+    if color ==2 then
+      tcolor = self.textcolor_pause
+    else
+      tcolor = self.textcolor_stopped
+    end
 --    bcolor = beautiful.bg_normal
   end
 --  return format('<span font="%s" color="%s" bgcolor="%s">%s%s%s</span>', self.font, tcolor, bcolor, self.ldecorator, awesompd.protect_string(text), self.rdecorator)
@@ -723,10 +728,16 @@ function awesompd:scroll_text(text)
 end
 
 function awesompd:update_widget()
-  if self.status ~= "Paused" then
-    self:set_text(self:scroll_text(self.text),true)
+  if self.status == "Paused" then
+--    self:set_text(self.text,2) -- no scrolling while paused
+      self:set_text(self:scroll_text(self.text),2) -- scrolling even while paused
   else
-    self:set_text(self.text,false)
+    if self.status == "Playing" then
+--      self:set_text(self:scroll_text(self.text),true)
+      self:set_text(self:scroll_text(self.text),1)
+    else -- stopped
+      self:set_text(self.text,3)
+    end
   end
   self:check_notify()
 end
