@@ -4,6 +4,9 @@
 -- @release v1.1.5
 ---------------------------------------------------------------------------
 
+local awful     = require("awful")
+local wibox     = require("wibox")
+local naughty   = require("naughty")
 awesompd = {}
 
 -- Function for checking icons and modules. Checks if a file exists,
@@ -27,7 +30,6 @@ end
 awesompd.try_require("utf8")
 awesompd.try_require("asyncshell")
 awesompd.try_require("jamendo")
->>>>>>> upstream/master
 local beautiful = require('beautiful')
 local naughty = naughty
 local awful = awful
@@ -122,11 +124,14 @@ function awesompd.pread(com, mode)
    if f then
       result = f:read(mode)
       f:close()
+   end
+   return result
+end
 
 -- Slightly modified function awful.util.table.join.
 function awesompd.ajoin(buttons)
     local result = {}
-    for i = 1, table.getn(buttons) do
+    for i = 1, #buttons do
         if buttons[i] then
             for k, v in pairs(buttons[i]) do
                 if type(k) == "number" then
@@ -179,7 +184,8 @@ function awesompd:create()
    setmetatable(instance,self)
    self.__index = self
    instance.current_server = 1
-   instance.widget = widget({ type = "textbox" })
+   --instance.widget = widget({ type = "textbox" })
+   instance.widget = wibox.widget.textbox()
    instance.notification = nil
    instance.scroll_pos = 1
    instance.text = ""
@@ -217,11 +223,12 @@ function awesompd:create()
    instance.show_album_cover = true
    instance.album_cover_size = 50
    instance.browser = "firefox"
+   
 -- Widget configuration
-   instance.widget:add_signal("mouse::enter", function(c)
+   instance.widget:connect_signal("mouse::enter", function(c)
                                                  instance:notify_track()
                                               end)
-   instance.widget:add_signal("mouse::leave", function(c)
+   instance.widget:connect_signal("mouse::leave", function(c)
                                                  instance:remove_hint()
                                               end)
    return instance
@@ -232,19 +239,19 @@ function awesompd:run()
    enable_dbg = self.debug_mode
    self.load_icons(self.path_to_icons)
    jamendo.set_current_format(self.jamendo_format)
-   if self.album_cover_size > 150 then
-      self.album_cover_size = 150
+   if self.album_cover_size > 100 then
+      self.album_cover_size = 100
    end
 
    self:update_track()
    self:check_playlists()
    self.update_widget_timer = timer({ timeout = 1 })
-   self.update_widget_timer:add_signal("timeout", function() 
+   self.update_widget_timer:connect_signal("timeout", function() 
                                                      self:update_widget() 
                                                   end)
    self.update_widget_timer:start()
    self.update_track_timer = timer({ timeout = self.update_interval })
-   self.update_track_timer:add_signal("timeout", function() 
+   self.update_track_timer:connect_signal("timeout", function() 
                                                     self:update_track() 
                                                  end)
    self.update_track_timer:start()
@@ -254,7 +261,7 @@ end
 function awesompd:register_buttons(buttons)
    widget_buttons = {}
    self.global_bindings = {}
-   for b=1,table.getn(buttons) do
+   for b=1,#buttons do
       if type(buttons[b][1]) == "string" then
          mods = { buttons[b][1] }
       else
@@ -279,12 +286,12 @@ end
 -- returns it.
 function awesompd:append_global_keys(keytable)
    if keytable then
-      for i = 1, table.getn(self.global_bindings) do
+      for i = 1, #self.global_bindings do
          keytable = awful.util.table.join(keytable, self.global_bindings[i])
       end
       return keytable
    else
-      for i = 1, table.getn(self.global_bindings) do
+      for i = 1, #self.global_bindings do
          globalkeys = awful.util.table.join(globalkeys, self.global_bindings[i])
       end
    end
@@ -393,7 +400,7 @@ end
 --- Change to the previous server.
 function awesompd:command_previous_server()
    return function()
-             servers = table.getn(self.servers)
+             servers = #self.servers
              if servers == 1 or servers == nil then
                 return
              else
@@ -409,7 +416,7 @@ end
 --- Change to the previous server.
 function awesompd:command_next_server()
    return function()
-             servers = table.getn(self.servers)
+             servers = #self.servers
              if servers == 1 or servers == nil then
                 return
              else
@@ -500,7 +507,7 @@ function awesompd:menu_playback()
                                                    true),
                         self:command_prev_track(), self.ICONS.PREV })
          end
-         if self.list_array and self.current_number ~= table.getn(self.list_array) then
+         if self.list_array and self.current_number ~= #self.list_array then
             table.insert(new_menu, 
                          { "Next: " .. 
                            awesompd.protect_string(jamendo.replace_link(
@@ -523,7 +530,7 @@ function awesompd:menu_list()
    if self.recreate_list then
       local new_menu = {}
       if self.list_array then
-         local total_count = table.getn(self.list_array) 
+         local total_count = #self.list_array 
          local start_num = (self.current_number - 15 > 0) and self.current_number - 15 or 1
          local end_num = (self.current_number + 15 < total_count ) and self.current_number + 15 or total_count
          for i = start_num, end_num do
@@ -544,8 +551,8 @@ end
 function awesompd:menu_playlists()
    if self.recreate_playlists then
       local new_menu = {}
-      if table.getn(self.playlists_array) > 0 then
-	 for i = 1, table.getn(self.playlists_array) do
+      if #self.playlists_array > 0 then
+	 for i = 1, #self.playlists_array do
 	    local submenu = {}
 	    submenu[1] = { "Add to current", self:command_load_playlist(self.playlists_array[i]) }
 	    submenu[2] = { "Replace current", self:command_replace_playlist(self.playlists_array[i]) }
@@ -560,26 +567,27 @@ function awesompd:menu_playlists()
    return self.playlists_menu
 end
 
-function awesompd:get_extapps_menu()
-  local new_menu = {}
-  table.insert(new_menu, {"Ncmpcpp", function() awful.util.spawn("urxvtc -e 'ncmpcpp'") end, nil})
-  table.insert(new_menu, {"Sonata", function() awful.util.spawn("sonata") end, nil})
-  self.extapps_menu = new_menu
-  return self.extapps_menu
-end
--- Returns a menu for toggling on/off notifications.
-function awesompd:get_notifications_menu()
-  local new_menu = {}
-  table.insert(new_menu, {"On", function() self.notifications = true end, self.notifications == true and self.ICONS.RADIO or nil})
-  table.insert(new_menu, {"Off", function() self.notifications = false end, self.notifications == false and self.ICONS.RADIO or nil})
-  self.notifications_menu = new_menu
-  return self.notifications_menu
-end
+--function awesompd:get_extapps_menu()
+  --local new_menu = {}
+  --table.insert(new_menu, {"Ncmpcpp", function() awful.util.spawn("urxvtc -e 'ncmpcpp'") end, nil})
+  --table.insert(new_menu, {"Sonata", function() awful.util.spawn("sonata") end, nil})
+  --self.extapps_menu = new_menu
+  --return self.extapps_menu
+--end
+---- Returns a menu for toggling on/off notifications.
+--function awesompd:get_notifications_menu()
+  --local new_menu = {}
+  --table.insert(new_menu, {"On", function() self.notifications = true end, self.notifications == true and self.ICONS.RADIO or nil})
+  --table.insert(new_menu, {"Off", function() self.notifications = false end, self.notifications == false and self.ICONS.RADIO or nil})
+  --self.notifications_menu = new_menu
+  --return self.notifications_menu
+--end
+
 -- Returns the server menu. Menu consists of all servers specified by user during initialization.
 function awesompd:menu_servers()
    if self.recreate_servers then
       local new_menu = {}
-      for i = 1, table.getn(self.servers) do
+      for i = 1, #self.servers do
 	 table.insert(new_menu, {"Server: " .. self.servers[i].server .. 
 				 ", port: " .. self.servers[i].port,
 			      function() self:change_server(i) end,
@@ -646,7 +654,7 @@ function awesompd:menu_jamendo_top()
          self:add_hint("Jamendo Top 100 by " .. 
                        jamendo.current_request_table.params.order.short_display,
                     format("Added %s tracks to the playlist",
-                           table.getn(track_table)))
+                           #track_table))
       end
    end
 end
@@ -741,7 +749,7 @@ function awesompd:menu_jamendo_search_by(what)
                 function(s)
                    local result = jamendo.search_by(what, s)
                    if result then
-                      local track_count = table.getn(result.tracks)
+                      local track_count = #result.tracks
                       self:add_jamendo_tracks(result.tracks)
                       self:add_hint(format("%s \"%s\" was found",
                                            what.display,
@@ -806,7 +814,7 @@ function awesompd:change_server(server_number)
 end
 
 function awesompd:add_jamendo_tracks(track_table)
-   for i = 1,table.getn(track_table) do
+   for i = 1,#track_table do
       self:command("add '" .. string.gsub(track_table[i].stream, '\\/', '/') .. "'")
    end
    self.recreate_menu = true
@@ -855,7 +863,7 @@ function awesompd:notify_state(state_changed)
    state_header = state_array[state_changed]
    table.remove(state_array,state_changed)
    full_state = state_array[1]
-   for i = 2, table.getn(state_array) do
+   for i = 2, #state_array do
       full_state = full_state .. "\n" .. state_array[i]
    end
    self:add_hint(state_header, full_state)
@@ -874,7 +882,7 @@ end
 
 -- This function actually sets the text on the widget.
 function awesompd:set_text(text)
-   self.widget.text = self:wrap_output(text)
+   self.widget:set_markup(self:wrap_output(text))
 end
 
 function awesompd.find_pattern(text, pattern, start)
@@ -910,11 +918,9 @@ end
 -- This function is called every second.
 function awesompd:update_widget()
   if self.status == "Paused" then
---    self:set_text(self.text,2) -- no scrolling while paused
       self:set_text(self:scroll_text(self.text),2) -- scrolling even while paused
   else
     if self.status == "Playing" then
---      self:set_text(self:scroll_text(self.text),true)
       self:set_text(self:scroll_text(self.text),1)
     else -- stopped
       self:set_text(self.text,3)
@@ -935,7 +941,7 @@ end
 
 -- Checks if notification should be shown and shows if positive.
 function awesompd:check_notify()
-   if self.to_notify and self.notifications then
+   if self.to_notify then
       self:notify_track()
       self.to_notify = false
    end
@@ -1012,7 +1018,7 @@ function awesompd:update_track(file)
 
             -- If the track is not the last, asynchronously download
             -- the cover for the next track.
-            if self.list_array and self.current_number ~= table.getn(self.list_array) then
+            if self.list_array and self.current_number ~= #self.list_array then
                -- Get the link (in case it is Jamendo stream) to the next track
                local next_track = 
                   self:command_read('playlist -f "%file%" | head -' .. 
@@ -1170,8 +1176,7 @@ function awesompd:try_get_local_cover()
       
       -- Get all images in the folder. Also escape occasional single
       -- quotes in folder name.
-      local request = format("ls '%s' | grep -P '\.jpg\|\.png\|\.gif|\.jpeg'",
-                             string.gsub(folder, "'", "'\\''"))
+      local request = format("ls '%s' | grep -P '.jpg|.png|.gif|.jpeg'", string.gsub(folder, "'", "'\\''"))
 
       local covers = self.pread(request, "*all")
       local covers_table = self.split(covers)
@@ -1182,8 +1187,7 @@ function awesompd:try_get_local_cover()
             -- Searching for front cover with grep because Lua regular
             -- expressions suck:[
             local front_cover = 
-               self.pread('echo "' .. covers .. 
-                          '" | grep -i "cover\|front\|folder\|albumart" | head -n 1', "*line")
+               self.pread('echo "' .. covers .. '" | grep -i "cover|front|folder|albumart" | head -n 1', "*line")
             if front_cover then
                result = folder .. front_cover
             end
